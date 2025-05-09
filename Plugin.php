@@ -4,7 +4,7 @@
  * 
  * @package ImageKitUploader
  * @author 猫东东
- * @version 1.0.0
+ * @version 1.0.1
  * @link https://github.com/xa1st
  */
 class ImageKitUploader_Plugin implements Typecho_Plugin_Interface
@@ -249,23 +249,17 @@ class ImageKitUploader_Plugin implements Typecho_Plugin_Interface
       $signature = hash_hmac('sha1', $dataToSign, $pluginOptions->privateKey);
             
       // 准备请求
-      $ch = curl_init();
-      curl_setopt($ch, CURLOPT_URL, 'https://api.imagekit.io/v1/files/remove');
-      curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-      curl_setopt($ch, CURLOPT_POST, true);
-      curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['fileIds' => [$path]]));
-      curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Authorization: Basic ' . $auth,
-        'X-Signature: ' . $signature,
-        'X-Timestamp: ' . $timestamp,
-        'Content-Type: application/json'
-      ]);
+      $client = Typecho_Http_Client::get();
+      $client->setHeader('Authorization', 'Basic ' . $auth)
+             ->setHeader('X-Signature', $signature)
+             ->setHeader('X-Timestamp', $timestamp)
+             ->setHeader('Content-Type', 'application/json');
       
-      $response = curl_exec($ch);
-      $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-      curl_close($ch);
-            
-      return $httpCode >= 200 && $httpCode < 300;
+      $response = $client->setData(json_encode(['fileIds' => [$path]]))
+                         ->send('https://api.imagekit.io/v1/files/remove', Typecho_Http_Client::METHOD_POST);
+      
+      $status = $client->getResponseStatus();
+      return $status >= 200 && $status < 300;
     } catch (Exception $e) {
       Typecho_Widget::widget('Widget_Notice')->set(_t('文件删除失败：' . $e->getMessage()), 'error');
       return false;
@@ -291,34 +285,58 @@ class ImageKitUploader_Plugin implements Typecho_Plugin_Interface
     try {
       // 构建上传所需认证信息
       $auth = base64_encode($pluginOptions->privateKey . ':');
-      // 构建请求
-      $ch = curl_init();
-      // 准备表单数据
-      $postFields = [
-        'file' => new CURLFile($filePath),
-        'fileName' => basename($uploadPath),
-        'useUniqueFileName' => 'false',
-        'folder' => dirname($uploadPath)
-      ];
-      // 构建URL
-      $url = 'https://upload.imagekit.io/api/v1/files/upload';
-      // 设置cURL选项
-      curl_setopt($ch, CURLOPT_URL, $url);
-      curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-      curl_setopt($ch, CURLOPT_POST, true);
-      curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
-      curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Basic ' . $auth]);
-      // 执行请求
-      $response = curl_exec($ch);
-      $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+      
+      // 构建文件上传参数
+      $fileName = basename($uploadPath);
+      $folder = dirname($uploadPath);
+      
+      // 创建一个临时边界标识用于multipart表单
+      $boundary = '----' . md5(uniqid(time()));
+      
+      // 构建multipart表单数据
+      $data = '';
+      // 添加文件名
+      $data .= "--" . $boundary . "\r\n";
+      $data .= 'Content-Disposition: form-data; name="fileName"' . "\r\n\r\n";
+      $data .= $fileName . "\r\n";
+      
+      // 添加文件夹
+      $data .= "--" . $boundary . "\r\n";
+      $data .= 'Content-Disposition: form-data; name="folder"' . "\r\n\r\n";
+      $data .= $folder . "\r\n";
+      
+      // 添加useUniqueFileName参数
+      $data .= "--" . $boundary . "\r\n";
+      $data .= 'Content-Disposition: form-data; name="useUniqueFileName"' . "\r\n\r\n";
+      $data .= "false\r\n";
+      
+      // 添加文件数据
+      $data .= "--" . $boundary . "\r\n";
+      $data .= 'Content-Disposition: form-data; name="file"; filename="' . basename($filePath) . '"' . "\r\n";
+      $data .= 'Content-Type: application/octet-stream' . "\r\n\r\n";
+      $data .= file_get_contents($filePath) . "\r\n";
+      $data .= "--" . $boundary . "--\r\n";
+      
+      // 设置HTTP客户端
+      $client = Typecho_Http_Client::get();
+      $client->setHeader('Authorization', 'Basic ' . $auth)
+             ->setHeader('Content-Type', 'multipart/form-data; boundary=' . $boundary)
+             ->setHeader('Content-Length', strlen($data));
+      
+      // 发送请求
+      $response = $client->setData($data)
+                         ->send('https://upload.imagekit.io/api/v1/files/upload', Typecho_Http_Client::METHOD_POST);
+      
+      $status = $client->getResponseStatus();
+      
       // 检查响应
-      if ($httpCode < 200 || $httpCode >= 300) {
+      if ($status < 200 || $status >= 300) {
         $error = json_decode($response, true);
         $errorMessage = isset($error['message']) ? $error['message'] : '未知错误';
         Typecho_Widget::widget('Widget_Notice')->set(_t('文件上传失败：' . $errorMessage), 'error');
         return false;
       }
-      curl_close($ch);
+      
       return true;  
     } catch (Exception $e) {
       Typecho_Widget::widget('Widget_Notice')->set(_t('文件上传失败：' . $e->getMessage()), 'error');
