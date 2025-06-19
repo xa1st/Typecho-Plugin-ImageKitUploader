@@ -305,7 +305,6 @@ class Plugin implements PluginInterface
             return false;
         }
     }
-    
 
     /**
      * 上传文件到ImageKit.io
@@ -395,8 +394,6 @@ class Plugin implements PluginInterface
             return false;
         }
     }
-    
-
     /**
      * 获取安全的文件名
      * 
