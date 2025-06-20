@@ -151,7 +151,7 @@ class Plugin implements PluginInterface
             $fileName = basename($file['path']);
         }
         // 上传到ImageKit.io
-        $uploaded = self::uploadToImageKit($file['tmp_name'], $filePath, $fileName, $options, $modify);
+        $uploaded = self::uploadToImageKit($file['tmp_name'], $filePath, $fileName, $options);
         // 上传失败抛出错误
         if (!$uploaded) throw new Exception('上传失败');
         // 返回结果
@@ -224,7 +224,7 @@ class Plugin implements PluginInterface
      * @param string $uploadPath ImageKit上的文件路径
      * @return bool
      */
-    private static function uploadToImageKit($filePath, $uploadPath, $uploadName, $options = [], $modify = false) {
+    private static function uploadToImageKit($filePath, $uploadPath, $uploadName, $options = []) {
         // 检查配置
         if (empty($options->privateKey)) throw new Exception('ImageKitUploader: 缺少必需的配置信息');
         // 检查文件是否存在
@@ -257,13 +257,6 @@ class Plugin implements PluginInterface
             $data .= 'Content-Type: application/octet-stream' . "\r\n\r\n";
             $data .= $fileContent . "\r\n";
             $data .= "--" . $boundary . "--\r\n";
-
-            // 如果是修改，则提交覆盖文件
-            if ($modify) {
-                $data .= "--" . $boundary . "\r\n";
-                $data .= 'Content-Disposition: form-data; name="overwriteFile"' . "\r\n\r\n";
-                $data .= "true\r\n";
-            }
             
             // 设置HTTP客户端
             $client = Client::get();
