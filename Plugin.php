@@ -9,12 +9,11 @@ use Typecho\Widget\Helper\Form\Element\Password;
 use Typecho\Widget\Helper\Form\Element\Radio;
 use Typecho\Http\Client;
 use Typecho\Common;
-use Typecho\Date;
 use Utils\Helper;
 use Widget\Upload;
 
-// 因为是后台插件，只能在后台运行
-if(!defined('__TYPECHO_ADMIN__')) exit;
+// 防止直接运行
+if (!defined('__TYPECHO_ROOT_DIR__')) exit;
 
 /**
  * 轻量重构版本，去掉官方SDK中多余功能，精简至只有2个API，打造轻量级上传插件
@@ -152,7 +151,7 @@ class Plugin implements PluginInterface
             $fileName = basename($file['path']);
         }
         // 上传到ImageKit.io
-        $uploaded = self::uploadToImageKit($file['tmp_name'], $filePath, $fileName, $options);
+        $uploaded = self::uploadToImageKit($file['tmp_name'], $filePath, $fileName, $options, $modify);
         // 上传失败抛出错误
         if (!$uploaded) throw new Exception('上传失败');
         // 返回结果
@@ -225,7 +224,7 @@ class Plugin implements PluginInterface
      * @param string $uploadPath ImageKit上的文件路径
      * @return bool
      */
-    private static function uploadToImageKit($filePath, $uploadPath, $uploadName, $options = []) {
+    private static function uploadToImageKit($filePath, $uploadPath, $uploadName, $options = [], $modify = false) {
         // 检查配置
         if (empty($options->privateKey)) throw new Exception('ImageKitUploader: 缺少必需的配置信息');
         // 检查文件是否存在
@@ -258,13 +257,20 @@ class Plugin implements PluginInterface
             $data .= 'Content-Type: application/octet-stream' . "\r\n\r\n";
             $data .= $fileContent . "\r\n";
             $data .= "--" . $boundary . "--\r\n";
+
+            // 如果是修改，则提交覆盖文件
+            if ($modify) {
+                $data .= "--" . $boundary . "\r\n";
+                $data .= 'Content-Disposition: form-data; name="overwriteFile"' . "\r\n\r\n";
+                $data .= "true\r\n";
+            }
             
             // 设置HTTP客户端
             $client = Client::get();
             $client->setHeader('Authorization', 'Basic ' . base64_encode($options->privateKey . ':'))
                    ->setHeader('Content-Type', 'multipart/form-data; boundary=' . $boundary)
                    ->setHeader('Content-Length', strlen($data))
-                   ->setTimeout(inval($options->timeout) <= 0 ? 30 : $options->timeout)
+                   ->setTimeout(intval($options->timeout) <= 0 ? 30 : $options->timeout)
                    ->setData($data)
                    ->setMethod(Client::METHOD_POST)
                    ->send('https://upload.imagekit.io/api/v1/files/upload');
