@@ -1,14 +1,15 @@
-# ImageKitUploader 插件使用说明
+# ImageKit Uploader for Typecho
 
-这是一个用于Typecho的ImageKit.io附件上传插件，使用此插件可以将Typecho博客的附件上传到ImageKit.io云存储服务上。
+这是一个用于Typecho的ImageKit.io附件上传插件，该插件经过轻量级重构，去掉了官方SDK中的多余功能，精简至只有必要的API，打造轻量级高效的上传插件。
 
 ## 功能特点
 
 - 支持将图片等各类附件上传至ImageKit.io云存储
-- 支持自定义域名
+- 支持自定义域名（可选，仅付费版ImageKit账户可用）
 - 支持自定义文件夹路径
 - 可选使用原始文件名或随机文件名
-- 完全支持PHP 8.x
+- 完全支持Typecho 1.x和PHP 8.x
+- 轻量级设计，去除冗余功能，仅保留核心上传和删除功能
 
 ## 安装方法
 
@@ -21,39 +22,46 @@
 
 插件启用后，需要在插件配置页面填写以下信息：
 
-1. **私钥(Private Key)**: 您的ImageKit账户私钥
-2. **公钥(Public Key)**: 您的ImageKit账户公钥
-3. **URL端点(Endpoint URL)**: 您的ImageKit URL端点，通常格式为`https://ik.imagekit.io/your_account`
-4. **上传路径前缀**: 文件在ImageKit中的存储路径前缀，默认为`typecho`
-5. **自定义域名**: 如果您为ImageKit配置了自定义域名，可以在这里填写
-6. **是否使用原始文件名**: 选择是否保留上传文件的原始文件名
+1. **私钥(Private Key)**: 您的ImageKit账户私钥，可以在ImageKit.io控制台获取
+2. **上传路径前缀**: 文件在ImageKit中的存储路径前缀，默认为`typecho`
+3. **自定义域名**: 如果您为ImageKit配置了自定义域名，可以在这里填写（仅ImageKit付费账户可用，免费用户请留空）
+4. **超时时间**: 上传文件超时时间，单位为秒，默认为30秒
+5. **是否使用原始文件名**: 选择是否保留上传文件的原始文件名，选择"否"则使用随机文件名
 
 ## 获取ImageKit配置信息
 
 1. 注册并登录[ImageKit.io](https://imagekit.io/)
 2. 在控制台中找到"Developer Options"
-3. 在此页面可以找到您的Private Key、Public Key和URL Endpoint
+3. 在此页面可以找到您的Private Key
 
 ## 常见问题
 
 ### 上传失败怎么办？
 
-- 检查您的ImageKit配置信息是否正确
+- 检查您的ImageKit私钥是否正确填写
 - 确认您的ImageKit账户是否有效
+- 检查PHP是否支持cURL扩展
 - 查看PHP错误日志获取更详细的错误信息
 
 ### 如何使用自定义域名？
 
-1. 在ImageKit控制台配置您的自定义域名
+1. 在ImageKit控制台配置您的自定义域名（需付费账户）
 2. 在插件设置中填写您的自定义域名（包含http://或https://前缀）
 
 ## 注意事项
 
 - 本插件需要PHP支持cURL扩展
-- 建议使用PHP 7.0或更高版本
 - 上传超大文件可能会受到PHP配置限制，请适当调整`php.ini`中的`upload_max_filesize`和`post_max_size`
+- 本插件为轻量级设计，不包含预签名URL等高级功能
 
 ## 更新日志
+
+### 2.0.0 (当前版本)
+- 轻量级重构，去掉官方SDK中多余功能
+- 精简至只有核心上传和删除API
+- 优化代码结构，提高性能
+- 增加超时配置选项
+- 改进错误处理
 
 ### 1.2.0
 - 修复返回路径错误的bug
@@ -69,3 +77,11 @@
 ## 许可证
 
 本插件采用MIT许可证。
+
+## 作者
+
+猫东东 (Xa1st)
+
+## 项目链接
+
+[https://github.com/xa1st/Typecho-Plugin-ImageKitUploader](https://github.com/xa1st/Typecho-Plugin-ImageKitUploader)
