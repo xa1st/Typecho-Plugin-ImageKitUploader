@@ -16,11 +16,11 @@ use Widget\Upload;
 if (!defined('__TYPECHO_ROOT_DIR__')) exit;
 
 /**
- * 轻量重构版本，去掉官方SDK中多余功能，精简至只有2个API，打造轻量级上传插件
+ * 轻量重构版本，去掉官方SDK中多余功能
  * 
  * @package ImageKitUploader
  * @author 猫东东
- * @version 2.0.0
+ * @version 2.1.0
  * @link https://github.com/xa1st/Typecho-Plugin-ImageKitUploader
  */
 class Plugin implements PluginInterface
@@ -84,11 +84,11 @@ class Plugin implements PluginInterface
         $customDomain = new Text(
             'customDomain', 
             null, 
-            '', 
-            _t('自定义域名'), 
-            _t('设置自定义域名，例如：https://cdn.example.com（可选），ImageKit的免费用户无此功能，请留空')
+            'http://ik.imagekit.io/{您的账户名}', 
+            _t('接入点'), 
+            _t('接入点或者自定义域名，例：https://ik.imagekit.io/{您的用户名}，请填写IMAGEKIT给的接入点链接或者你的自定义域名')
         );
-        $form->addInput($customDomain);
+        $form->addInput($customDomain->addRule('required', _t('接入点或者域名不能为空')));
 
         $timeOut = new Text(
             'timeOut',
@@ -213,8 +213,10 @@ class Plugin implements PluginInterface
     * @return string
     */
     public static function attachmentHandle(array $content) {
-        // 直接返回URL就可以了
-        return $content['attachment']->url ?? '';
+       // 如果存在url，则直接返回url
+       if($content['attachment']->url) return $content['attachment']->url;
+       // 如果不匹配，则返回本地图片地址
+       return Common::url($content['attachment']->path, Options::alloc()->siteUrl);
     }
     
     /**
